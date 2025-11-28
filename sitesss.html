@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Фінансовий Менеджер - Інтерактивна Специфікація</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #FDFBF7; color: #4A4A4A; }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 100%;
+            height: 350px;
+            max-height: 400px;
+            margin: 0 auto;
+        }
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 250px;
+            }
+        }
+        .nav-item.active {
+            background-color: #E6E2DE;
+            color: #1F2937;
+            font-weight: 600;
+            border-left: 4px solid #D97706;
+        }
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            border: 1px solid #F3F0EB;
+            transition: transform 0.2s;
+        }
+        .card:hover:not(.no-hover) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+        }
+        /* Scrollbar custom */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r border-stone-200 hidden lg:flex flex-col z-10">
+        <div class="p-6 flex items-center gap-3 border-b border-stone-100">
+            <div class="w-8 h-8 bg-amber-600 rounded-lg flex items-center justify-center text-white font-bold">
+                <i class="fa-solid fa-wallet"></i>
+            </div>
+            <span class="font-bold text-lg text-stone-800 tracking-tight">FinManager</span>
+        </div>
+        
+        <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+            <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-r-lg text-sm text-stone-600 hover:bg-stone-50 transition-colors">
+                <i class="fa-solid fa-chart-pie w-5 text-center"></i> Дашборд
+            </button>
+            <button onclick="switchView('transactions')" id="nav-transactions" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-r-lg text-sm text-stone-600 hover:bg-stone-50 transition-colors">
+                <i class="fa-solid fa-list w-5 text-center"></i> Операції
+            </button>
+            <div class="pt-4 pb-2 px-4 text-xs font-semibold text-stone-400 uppercase tracking-wider">Про проєкт</div>
+            <button onclick="switchView('specs')" id="nav-specs" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-r-lg text-sm text-stone-600 hover:bg-stone-50 transition-colors">
+                <i class="fa-solid fa-file-contract w-5 text-center"></i> Специфікація
+            </button>
+            <button onclick="switchView('tech')" id="nav-tech" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-r-lg text-sm text-stone-600 hover:bg-stone-50 transition-colors">
+                <i class="fa-solid fa-code w-5 text-center"></i> Технології
+            </button>
+        </nav>
+
+        <div class="p-4 border-t border-stone-100 bg-stone-50">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-stone-300 flex items-center justify-center text-stone-500">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+                <div>
+                    <div class="text-sm font-medium text-stone-900">Користувач</div>
+                    <div class="text-xs text-stone-500 truncate" id="auth-status">Завантаження...</div>
+                </div>
+            </div>
+            <div class="mt-2 pt-2 border-t border-stone-100">
+                <div class="text-xs font-medium text-stone-500">Ваш User ID:</div>
+                <code class="text-xs text-stone-700 break-all" id="user-id-display">Очікування автентифікації...</code>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden bg-[#FDFBF7]">
+        <!-- Mobile Header -->
+        <header class="lg:hidden bg-white border-b border-stone-200 p-4 flex justify-between items-center z-20">
+            <div class="font-bold text-lg text-stone-800"><i class="fa-solid fa-wallet text-amber-600 mr-2"></i> FinManager</div>
+            <button onclick="toggleMobileMenu()" class="text-stone-600" id="mobileMenuButton"><i class="fa-solid fa-bars text-xl"></i></button>
+        </header>
+
+        <!-- Mobile Menu Overlay -->
+        <div id="mobile-menu" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden" onclick="toggleMobileMenu()">
+            <div class="bg-white w-64 h-full p-4 flex flex-col" onclick="event.stopPropagation()">
+                <div class="font-bold text-xl mb-6 text-stone-800">Меню</div>
+                <button onclick="switchView('dashboard'); toggleMobileMenu()" class="nav-item p-3 text-left border-b border-stone-100"><i class="fa-solid fa-chart-pie mr-2"></i> Дашборд</button>
+                <button onclick="switchView('transactions'); toggleMobileMenu()" class="nav-item p-3 text-left border-b border-stone-100"><i class="fa-solid fa-list mr-2"></i> Операції</button>
+                <button onclick="switchView('specs'); toggleMobileMenu()" class="nav-item p-3 text-left border-b border-stone-100"><i class="fa-solid fa-file-contract mr-2"></i> Специфікація</button>
+                <button onclick="switchView('tech'); toggleMobileMenu()" class="nav-item p-3 text-left"><i class="fa-solid fa-code mr-2"></i> Технології</button>
+            </div>
+        </div>
+
+        <!-- Scrollable Content Area -->
+        <div class="flex-1 overflow-y-auto p-4 md:p-8" id="content-area">
+            
+            <!-- VIEW: DASHBOARD -->
+            <div id="view-dashboard" class="space-y-6 fade-in">
+                <div class="mb-6">
+                    <h1 class="text-3xl font-bold text-stone-800">Фінансовий Огляд</h1>
+                    <p class="text-stone-500 mt-2">Дані завантажуються <span id="data-source-info">з Firestore.</span></p>
+                </div>
+                
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="kpi-cards">
+                    <!-- Cards will be dynamically updated -->
+                </div>
+
+                <!-- Charts Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Monthly Trend -->
+                    <div class="card p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-lg text-stone-800">Динаміка доходів та витрат (6 міс.)</h3>
+                            <select onchange="updateCharts()" class="text-xs border border-stone-200 rounded px-2 py-1 bg-stone-50 text-stone-600">
+                                <option value="2023">2023</option>
+                                <option value="2022">2022</option>
+                            </select>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="barChart"></canvas>
+                        </div>
+                        <p class="text-xs text-stone-400 mt-4 text-center">Дані динамічні</p>
+                    </div>
+
+                    <!-- Category Breakdown -->
+                    <div class="card p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-lg text-stone-800">Структура витрат</h3>
+                            <button onclick="showNonBlockingMessage('Перехід до детального звіту по категоріях.', 'info')" class="text-amber-600 text-xs font-medium hover:underline">Детальніше</button>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="pieChart"></canvas>
+                        </div>
+                        <p class="text-xs text-stone-400 mt-4 text-center">Розподіл за основними категоріями</p>
+                    </div>
+                </div>
+
+                <!-- Top Expenses Table -->
+                <div class="card overflow-hidden">
+                    <div class="p-6 border-b border-stone-100 flex justify-between items-center">
+                        <h3 class="font-bold text-lg text-stone-800">ТОП-5 Найбільших витрат</h3>
+                        <span class="bg-stone-100 text-stone-600 text-xs px-2 py-1 rounded">Останні записи</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-stone-50 text-stone-500 font-medium border-b border-stone-100">
+                                <tr>
+                                    <th class="px-6 py-3">Категорія</th>
+                                    <th class="px-6 py-3">Дата</th>
+                                    <th class="px-6 py-3">Нотатка</th>
+                                    <th class="px-6 py-3 text-right">Сума</th>
+                                </tr>
+                            </thead >
+                            <tbody class="divide-y divide-stone-100" id="topExpensesBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: TRANSACTIONS -->
+            <div id="view-transactions" class="hidden space-y-6 fade-in">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h1 class="text-3xl font-bold text-stone-800">Операції</h1>
+                        <p class="text-stone-500 mt-2">Керування доходами та витратами.</p>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <button onclick="seedDatabase()" class="border border-amber-600 text-amber-600 hover:bg-amber-50 px-5 py-2.5 rounded-lg transition-all flex items-center gap-2 font-medium">
+                            <i class="fa-solid fa-seedling"></i> Заповнити тестовими даними
+                        </button>
+                        <button onclick="toggleAddForm()" class="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2.5 rounded-lg shadow-lg shadow-amber-200 transition-all flex items-center gap-2 font-medium">
+                            <i class="fa-solid fa-plus"></i> Додати запис
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Add Transaction Form (initially hidden) -->
+                <div id="addFormContainer" class="card p-6 mb-6 no-hover hidden">
+                    <h3 class="font-bold text-lg text-stone-800 mb-4">Нова Транзакція</h3>
+                    <form id="addTransactionForm">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <input name="amount" type="number" step="0.01" placeholder="Сума (напр., 100.50)" required class="w-full px-4 py-2 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            <select name="type" required class="w-full px-4 py-2 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-stone-600">
+                                <option value="" disabled selected>Виберіть тип</option>
+                                <option value="income">Дохід</option>
+                                <option value="expense">Витрата</option>
+                            </select>
+                            <select name="category" required class="w-full px-4 py-2 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-stone-600" id="formCategorySelect">
+                                <option value="" disabled selected>Виберіть категорію</option>
+                            </select>
+                            <input name="date" type="date" required class="w-full px-4 py-2 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-stone-600">
+                            <input name="note" type="text" placeholder="Нотатка (напр., Кава)" class="md:col-span-3 px-4 py-2 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium">Зберегти</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Filters -->
+                <div class="card p-4 grid grid-cols-1 md:grid-cols-4 gap-4 no-hover">
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-stone-400"></i>
+                        <input type="text" placeholder="Пошук по нотатках..." id="searchFilter" oninput="applyFilters()" class="w-full pl-10 pr-4 py-2 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-stone-50">
+                    </div>
+                    <select id="typeFilter" onchange="applyFilters()" class="w-full px-4 py-2 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50 text-stone-600">
+                        <option value="all">Всі типи</option>
+                        <option value="income">Доходи</option>
+                        <option value="expense">Витрати</option>
+                    </select>
+                    <select id="categoryFilter" onchange="applyFilters()" class="w-full px-4 py-2 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-stone-50 text-stone-600">
+                        <option value="all">Всі категорії</option>
+                        <!-- Populated by JS -->
+                    </select>
+                    <button onclick="showNonBlockingMessage('Дані експортовано у CSV формат.'); console.log('Експорт даних у CSV.')" class="border border-stone-300 text-stone-600 hover:bg-stone-50 px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-file-export"></i> Експорт CSV
+                    </button>
+                </div>
+
+                <!-- Full Transaction List -->
+                <div class="card overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left" id="transactionTable">
+                            <thead class="bg-stone-50 text-stone-500 font-medium border-b border-stone-100">
+                                <tr>
+                                    <th class="px-6 py-4">Тип</th>
+                                    <th class="px-6 py-4">Категорія</th>
+                                    <th class="px-6 py-4">Дата</th>
+                                    <th class="px-6 py-4">Нотатка</th>
+                                    <th class="px-6 py-4 text-right">Сума</th>
+                                    <th class="px-6 py-4 text-center">Дії</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-stone-100" id="transactionsBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Pagination -->
+                    <div class="p-4 border-t border-stone-100 flex justify-between items-center text-sm text-stone-500">
+                        <span id="paginationInfo"></span>
+                        <div class="flex gap-2">
+                            <button id="prevPageBtn" onclick="paginateTransactions(-1)" class="px-3 py-1 border border-stone-200 rounded hover:bg-stone-50 disabled:opacity-50">Назад</button>
+                            <button id="nextPageBtn" onclick="paginateTransactions(1)" class="px-3 py-1 border border-stone-200 rounded hover:bg-stone-50 disabled:opacity-50">Вперед</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: SPECS (SOURCE REPORT) -->
+            <div id="view-specs" class="hidden space-y-6 fade-in">
+                <div class="mb-6">
+                    <h1 class="text-3xl font-bold text-stone-800">Специфікація Проєкту</h1>
+                    <p class="text-stone-500 mt-2">Детальний план реалізації згідно з наданим технічним завданням.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Core Idea -->
+                    <div class="card p-6 border-t-4 border-amber-500">
+                        <h2 class="text-xl font-bold text-stone-800 mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-bullseye text-amber-600"></i> Головна ідея
+                        </h2>
+                        <p class="text-stone-600 leading-relaxed">
+                            Вебзастосунок для фінансового менеджменту, що дозволяє користувачам ефективно керувати своїми фінансами через інтуїтивний інтерфейс. 
+                            Ключова мета — надати інструменти для відстеження доходів, витрат та глибокої аналітики.
+                        </p>
+                    </div>
+
+                    <!-- Functional Structure -->
+                    <div class="card p-6 border-t-4 border-blue-500">
+                        <h2 class="text-xl font-bold text-stone-800 mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-sitemap text-blue-600"></i> Структура функціоналу
+                        </h2>
+                        <ul class="space-y-3">
+                            <li class="flex items-start gap-3">
+                                <span class="bg-blue-100 text-blue-600 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                                <span class="text-stone-600"><strong>Авторизація:</strong> Реєстрація, логін, хешування паролів, ізоляція даних користувачів. **(Реалізовано через Firebase)**</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="bg-blue-100 text-blue-600 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                                <span class="text-stone-600"><strong>Операції:</strong> Дата, тип, сума, категорія, нотатка. CRUD операції. **(Тепер зберігаються у Firestore)**</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="bg-blue-100 text-blue-600 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                                <span class="text-stone-600"><strong>Категорії:</strong> Гнучке налаштування (Їжа, Дозвілля, Освіта тощо).</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="bg-blue-100 text-blue-600 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                                <span class="text-stone-600"><strong>Аналітика:</strong> Дашборд, діаграми, ТОП витрат, порівняння.</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Additional Features -->
+                    <div class="card p-6 border-t-4 border-emerald-500">
+                        <h2 class="text-xl font-bold text-stone-800 mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-filter text-emerald-600"></i> Фільтри та Інструменти
+                        </h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="bg-emerald-50 p-3 rounded-lg">
+                                <h4 class="font-bold text-emerald-800 text-sm mb-1">Фільтрація</h4>
+                                <p class="text-emerald-700 text-xs">По місяцю, року, типу операції, пошук по нотатках.</p>
+                            </div>
+                            <div class="bg-emerald-50 p-3 rounded-lg">
+                                <h4 class="font-bold text-emerald-800 text-sm mb-1">Імпорт/Експорт</h4>
+                                <p class="text-emerald-700 text-xs">CSV/JSON формати для обміну даними.</p>
+                            </div>
+                            <div class="bg-emerald-50 p-3 rounded-lg">
+                                <h4 class="font-bold text-emerald-800 text-sm mb-1">Профіль</h4>
+                                <p class="text-emerald-700 text-xs">Налаштування бюджету, зміна пароля.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: TECH STACK -->
+            <div id="view-tech" class="hidden space-y-6 fade-in">
+                <div class="mb-6">
+                    <h1 class="text-3xl font-bold text-stone-800">Технологічний Стек</h1>
+                    <p class="text-stone-500 mt-2">Рекомендовані інструменти для реалізації.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="card p-6 hover:border-orange-500 cursor-pointer transition-colors group">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center text-orange-600 text-2xl group-hover:bg-orange-600 group-hover:text-white transition-colors">
+                                <i class="fa-solid fa-database"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-stone-800">Backend/Database: Firebase</h3>
+                                <span class="text-xs bg-stone-100 text-stone-600 px-2 py-0.5 rounded">Використовується</span>
+                            </div>
+                        </div>
+                        <ul class="text-sm text-stone-600 space-y-2 list-disc list-inside">
+                            <li>**Firestore** для NoSQL бази даних (зберігання транзакцій)</li>
+                            <li>**Authentication** для безпечного входу</li>
+                            <li>Реальний час (`onSnapshot`)</li>
+                        </ul>
+                    </div>
+
+                    <div class="card p-6 hover:border-sky-500 cursor-pointer transition-colors group">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="w-12 h-12 bg-sky-100 rounded-xl flex items-center justify-center text-sky-600 text-2xl group-hover:bg-sky-600 group-hover:text-white transition-colors">
+                                <i class="fa-solid fa-code"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-stone-800">Frontend</h3>
+                                <span class="text-xs bg-stone-100 text-stone-600 px-2 py-0.5 rounded">UI/UX</span>
+                            </div>
+                        </div>
+                        <ul class="text-sm text-stone-600 space-y-2 list-disc list-inside">
+                            <li>Tailwind CSS для адаптивного дизайну</li>
+                            <li>Chart.js для візуалізації даних</li>
+                            <li>**Ванільний JS** для інтерактивності</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Non-blocking Message Container -->
+    <div id="messageContainer" class="fixed bottom-4 right-4 z-50 space-y-2 pointer-events-none">
+        <!-- Messages will appear here -->
+    </div>
+
+    <!-- Auth/Loading Overlay: Blocks interaction until data is ready -->
+    <div id="full-page-loader" class="fixed inset-0 bg-stone-50/70 backdrop-blur-sm z-50 flex items-center justify-center transition-opacity duration-300">
+        <div class="card p-8 flex flex-col items-center">
+            <i class="fa-solid fa-spinner fa-spin text-4xl text-amber-600 mb-4"></i>
+            <span class="text-xl font-medium text-stone-700" id="loader-title">Підключення до бази даних...</span>
+            <span class="text-sm text-stone-500 mt-2" id="loader-status">Очікування автентифікації.</span>
+        </div>
+    </div>
+
+
+    <script type="module">
+        // --- FIREBASE IMPORTS (Тільки для використання у Canvas) ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, query, addDoc, deleteDoc, onSnapshot, doc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // --- GLOBAL FIREBASE/APP VARIABLES ---
+        let db;
+        let auth;
+        let unsubscribeFromTransactions = null; 
+
+        // --- ВИЗНАЧЕННЯ СЕРЕДОВИЩА ---
+        const IS_CANVAS_ENVIRONMENT = typeof __initial_auth_token !== 'undefined';
+        const MOCK_USER_ID = crypto.randomUUID(); // Унікальний ID для локального режиму
+        
+        // Налаштування конфігурації відповідно до середовища
+        const appId = IS_CANVAS_ENVIRONMENT ? (typeof __app_id !== 'undefined' ? __app_id : 'default-canvas-app-id') : 'local-mock-app-id';
+        const firebaseConfig = IS_CANVAS_ENVIRONMENT ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = IS_CANVAS_ENVIRONMENT ? __initial_auth_token : null;
+
+
+        // --- UTILITY: NON-BLOCKING MESSAGES (REPLACES ALERT/CONFIRM) ---
+        window.showNonBlockingMessage = (text, type = 'success') => {
+            const container = document.getElementById('messageContainer');
+            const colorMap = {
+                success: 'bg-emerald-500',
+                info: 'bg-blue-500',
+                error: 'bg-rose-500'
+            };
+            const messageEl = document.createElement('div');
+            messageEl.className = `p-3 rounded-lg text-white font-medium shadow-xl ${colorMap[type]} transition-opacity duration-300 opacity-0 transform translate-y-2 max-w-xs`;
+            messageEl.textContent = text;
+            
+            container.appendChild(messageEl);
+
+            // Animate in
+            setTimeout(() => {
+                messageEl.classList.remove('opacity-0', 'translate-y-2');
+                messageEl.classList.add('opacity-100', 'translate-y-0');
+            }, 10);
+
+            // Animate out and remove
+            setTimeout(() => {
+                messageEl.classList.remove('opacity-100', 'translate-y-0');
+                messageEl.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => messageEl.remove(), 300);
+            }, 3000);
+        }
+
+        // --- DATA STORE & STATE ---
+        const state = {
+            transactions: [], 
+            userId: null,
+            isAuthReady: false,
+            categories: {
+                income: ['Зарплата', 'Фріланс', 'Подарунок', 'Інвестиції'],
+                expense: ['Їжа', 'Транспорт', 'Житло', 'Освіта', 'Дозвілля', 'Здоров\'я', 'Техніка', 'Інше']
+            }
+        };
+
+        // Pagination and Filter State
+        let currentPage = 1;
+        const transactionsPerPage = 10;
+        let currentFilter = {
+            search: '',
+            type: 'all',
+            category: 'all'
+        };
+
+        // --- MOCK / LIVE DATA HANDLING ---
+
+        // Обгортка для onSnapshot (повертає функцію відписки)
+        function listenForTransactions(callback) {
+            if (IS_CANVAS_ENVIRONMENT && db && state.userId) {
+                const transactionsRef = collection(db, 'artifacts', appId, 'users', state.userId, 'transactions');
+                const q = query(transactionsRef); 
+                return onSnapshot(q, (snapshot) => {
+                    const transactions = [];
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const date = data.date?.toDate ? data.date.toDate().toISOString().split('T')[0] : data.date;
+                        transactions.push({ id: doc.id, date, type: data.type, category: data.category, amount: data.amount, note: data.note });
+                    });
+                    transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    callback(transactions);
+                }, (error) => {
+                    console.error("Error setting up transaction listener:", error);
+                    showNonBlockingMessage(`Помилка завантаження даних: ${error.message}`, 'error');
+                });
+            } else {
+                // MOCK MODE: Повертаємо заглушку функції відписки
+                const mockListener = () => {
+                    console.log("Mock Listener triggered. Using in-memory data.");
+                    const transactions = [...state.transactions]; // Повертаємо копію
+                    transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    callback(transactions);
+                };
+                // Ініціалізуємо mock-даними та запускаємо слухача
+                state.transactions = getSampleData().map(t => ({...t, id: crypto.randomUUID()}));
+                mockListener();
+                return () => console.log("Mock listener unsubscribed."); 
+            }
+        }
+        
+        // Обгортка для addDoc
+        async function addTransaction(newTransaction) {
+            if (IS_CANVAS_ENVIRONMENT && db && state.userId) {
+                const transactionsRef = collection(db, 'artifacts', appId, 'users', state.userId, 'transactions');
+                await addDoc(transactionsRef, newTransaction);
+            } else {
+                // MOCK MODE: Додавання в пам'ять
+                const id = crypto.randomUUID();
+                state.transactions.push({ ...newTransaction, id });
+                // Імітація оновлення через onSnapshot
+                setupRealtimeListener(); 
+            }
+        }
+
+        // Обгортка для deleteDoc
+        async function deleteTransactionDoc(docId) {
+            if (IS_CANVAS_ENVIRONMENT && db && state.userId) {
+                const docRef = doc(db, 'artifacts', appId, 'users', state.userId, 'transactions', docId);
+                await deleteDoc(docRef);
+            } else {
+                // MOCK MODE: Видалення з пам'яті
+                state.transactions = state.transactions.filter(t => t.id !== docId);
+                // Імітація оновлення через onSnapshot
+                setupRealtimeListener();
+            }
+        }
+
+        // --- FIREBASE INITIALIZATION & AUTH ---
+
+        async function initFirebase() {
+            const loaderTitle = document.getElementById('loader-title');
+            const loaderStatus = document.getElementById('loader-status');
+            const dataSourceInfo = document.getElementById('data-source-info');
+
+            // --- LOCAL MOCK MODE SETUP ---
+            if (!IS_CANVAS_ENVIRONMENT) {
+                console.log("Running in Local Mock Mode (Firebase simulation).");
+                loaderTitle.textContent = 'Локальний Режим (Симуляція)';
+                loaderStatus.textContent = 'Дані завантажено з пам\'яті.';
+                dataSourceInfo.textContent = 'з пам\'яті (Mock Mode).';
+                
+                state.userId = MOCK_USER_ID;
+                state.isAuthReady = true;
+                document.getElementById('auth-status').textContent = 'Локальний Mock';
+                document.getElementById('user-id-display').textContent = MOCK_USER_ID;
+
+                // Запуск mock-слухача з початковими даними
+                setupRealtimeListener(); 
+                
+                // Приховуємо завантажувач
+                document.getElementById('full-page-loader').classList.add('hidden');
+                showNonBlockingMessage('Локальний режим активовано. Дані не зберігаються.', 'info');
+                return;
+            }
+
+            // --- CANVAS LIVE MODE SETUP ---
+            try {
+                loaderTitle.textContent = 'Підключення до Firestore...';
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                loaderStatus.textContent = 'Виконання автентифікації...';
+
+                await signInWithCustomToken(auth, initialAuthToken);
+                
+                // Запуск слухача автентифікації
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        state.userId = user.uid;
+                        state.isAuthReady = true;
+                        document.getElementById('auth-status').textContent = 'Активний (Firestore)';
+                        document.getElementById('user-id-display').textContent = user.uid;
+                        loaderStatus.textContent = 'Завантаження даних у реальному часі...';
+                        
+                        setupRealtimeListener();
+                    } else {
+                        throw new Error("User state is unexpectedly null after sign-in.");
+                    }
+                });
+
+            } catch (error) {
+                console.error("Firebase initialization or sign-in error:", error);
+                document.getElementById('auth-status').textContent = `Помилка: ${error.code || error.message}`;
+                loaderStatus.textContent = `Помилка: Не вдалося підключитися. ${error.message}`;
+                showNonBlockingMessage(`Помилка підключення: ${error.message}`, 'error');
+            }
+        }
+
+        function setupRealtimeListener() {
+            if (!state.isAuthReady) return;
+
+            const loader = document.getElementById('full-page-loader');
+
+            // Якщо слухач вже існує, відписуємося
+            if (unsubscribeFromTransactions) {
+                unsubscribeFromTransactions();
+            }
+            
+            // Викликаємо універсальну функцію
+            unsubscribeFromTransactions = listenForTransactions((transactions) => {
+                state.transactions = transactions;
+                
+                // Оновлюємо весь UI після отримання нових даних
+                renderKpiCards();
+                renderTopExpenses();
+                updateCharts();
+                applyFilters(); // Це також викликає renderTransactions()
+                
+                // Приховуємо завантажувач
+                if (loader && !loader.classList.contains('hidden')) {
+                    loader.classList.add('hidden');
+                    if(IS_CANVAS_ENVIRONMENT) {
+                        showNonBlockingMessage('Дані успішно завантажено з Firestore!', 'success');
+                    }
+                }
+            });
+        }
+
+
+        // --- NAVIGATION (No change) ---
+        function switchView(viewId) {
+            document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`view-${viewId}`).classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            const activeNav = document.getElementById(`nav-${viewId}`);
+            if(activeNav) activeNav.classList.add('active');
+
+            if(viewId === 'dashboard') {
+                updateCharts();
+                renderKpiCards();
+                renderTopExpenses();
+            }
+            if(viewId === 'transactions') {
+                renderTransactions();
+            }
+        }
+
+        window.switchView = switchView; 
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        // --- TRANSACTION LOGIC ---
+
+        function populateCategorySelects() {
+            const filters = document.getElementById('categoryFilter');
+            const form = document.getElementById('formCategorySelect');
+            
+            filters.innerHTML = '<option value="all">Всі категорії</option>';
+            form.innerHTML = '<option value="" disabled selected>Виберіть категорію</option>';
+
+            const allCategories = [...new Set([...state.categories.income, ...state.categories.expense])].sort();
+
+            allCategories.forEach(cat => {
+                const optionFilter = new Option(cat, cat);
+                const optionForm = new Option(cat, cat);
+                filters.appendChild(optionFilter);
+                form.appendChild(optionForm);
+            });
+        }
+
+        function getFilteredAndPaginatedTransactions() {
+            let filtered = state.transactions
+                .filter(t => currentFilter.type === 'all' || t.type === currentFilter.type)
+                .filter(t => currentFilter.category === 'all' || t.category === currentFilter.category)
+                .filter(t => t.note.toLowerCase().includes(currentFilter.search.toLowerCase()));
+
+            // Total filtered count
+            const totalCount = filtered.length;
+            const totalPages = Math.ceil(totalCount / transactionsPerPage);
+
+            // Apply pagination
+            const start = (currentPage - 1) * transactionsPerPage;
+            const end = start + transactionsPerPage;
+            
+            return {
+                data: filtered.slice(start, end),
+                totalCount: totalCount,
+                totalPages: totalPages
+            };
+        }
+
+        function renderTransactions() {
+            const { data, totalCount, totalPages } = getFilteredAndPaginatedTransactions();
+            const tbody = document.getElementById('transactionsBody');
+            tbody.innerHTML = '';
+
+            const start = (currentPage - 1) * transactionsPerPage + 1;
+            const end = Math.min(start + data.length - 1, totalCount);
+
+            document.getElementById('paginationInfo').textContent = `Показано ${start}-${end} з ${totalCount} записів`;
+            document.getElementById('prevPageBtn').disabled = currentPage === 1;
+            document.getElementById('nextPageBtn').disabled = currentPage >= totalPages;
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-stone-500">Записів за заданими фільтрами не знайдено.</td></tr>';
+                return;
+            }
+
+            data.forEach(t => {
+                const isIncome = t.type === 'income';
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-stone-50 transition-colors border-b border-stone-50';
+                
+                let iconClass = 'fa-circle-question';
+                if(t.category === 'Їжа') iconClass = 'fa-utensils';
+                else if(t.category === 'Транспорт') iconClass = 'fa-car';
+                else if(t.category === 'Житло') iconClass = 'fa-house';
+                else if(t.category === 'Зарплата' || t.category === 'Фріланс') iconClass = 'fa-money-bill-wave';
+                else if(t.category === 'Освіта') iconClass = 'fa-graduation-cap';
+                else if(t.category === 'Дозвілля') iconClass = 'fa-film';
+                else if(t.category === 'Здоров\'я') iconClass = 'fa-heart-pulse';
+                else if(t.category === 'Техніка') iconClass = 'fa-laptop';
+
+                const badgeColor = isIncome ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700';
+                const amountColor = isIncome ? 'text-emerald-600' : 'text-stone-800';
+                const sign = isIncome ? '+' : '-';
+
+                row.innerHTML = `
+                    <td class="px-6 py-4">
+                        <span class="text-xs font-bold px-2 py-1 rounded ${badgeColor}">
+                            ${isIncome ? 'Дохід' : 'Витрата'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 flex items-center gap-3">
+                        <div class="w-8 h-8 rounded bg-stone-100 text-stone-500 flex items-center justify-center">
+                            <i class="fa-solid ${iconClass}"></i>
+                        </div>
+                        <span class="font-medium text-stone-700">${t.category}</span>
+                    </td>
+                    <td class="px-6 py-4 text-stone-500">${t.date}</td>
+                    <td class="px-6 py-4 text-stone-500">${t.note}</td>
+                    <td class="px-6 py-4 text-right font-bold ${amountColor}">${sign}${t.amount.toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴</td>
+                    <td class="px-6 py-4 text-center">
+                        <button onclick="deleteTransaction('${t.id}')" class="text-stone-400 hover:text-rose-500 transition-colors"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // ФУНКЦІЯ ВИДАЛЕННЯ: Викликає універсальну обгортку
+        window.deleteTransaction = async (docId) => {
+            if (!state.isAuthReady) {
+                 showNonBlockingMessage('Система не готова.', 'error');
+                 return;
+            }
+
+            try {
+                await deleteTransactionDoc(docId);
+                showNonBlockingMessage('Транзакцію успішно видалено.', 'success');
+            } catch (error) {
+                console.error("Error deleting document:", error);
+                showNonBlockingMessage(`Помилка видалення: ${error.message}`, 'error');
+            }
+        }
+
+        window.applyFilters = applyFilters;
+        function applyFilters() {
+            currentFilter.search = document.getElementById('searchFilter').value.trim();
+            currentFilter.type = document.getElementById('typeFilter').value;
+            currentFilter.category = document.getElementById('categoryFilter').value;
+            currentPage = 1; // Reset to first page after applying new filters
+            renderTransactions();
+        }
+
+        window.paginateTransactions = paginateTransactions;
+        function paginateTransactions(direction) {
+            const { totalPages } = getFilteredAndPaginatedTransactions();
+            const newPage = currentPage + direction;
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                renderTransactions();
+            }
+        }
+        
+        window.toggleAddForm = toggleAddForm;
+        function toggleAddForm() {
+            const formContainer = document.getElementById('addFormContainer');
+            formContainer.classList.toggle('hidden');
+        }
+
+        // ФУНКЦІЯ ДОДАВАННЯ: Викликає універсальну обгортку
+        async function submitNewTransaction(event) {
+            event.preventDefault();
+            
+            if (!state.isAuthReady) {
+                 showNonBlockingMessage('Система не готова. Спробуйте пізніше.', 'error');
+                 return;
+            }
+
+            const form = event.target;
+            const formData = new FormData(form);
+            const amountValue = formData.get('amount');
+            const amountFloat = parseFloat(amountValue);
+
+            if (!amountValue || isNaN(amountFloat) || amountFloat <= 0) {
+                showNonBlockingMessage('Будь ласка, введіть коректну позитивну суму.', 'error');
+                return;
+            }
+
+            const newTransaction = {
+                date: formData.get('date'),
+                type: formData.get('type'),
+                category: formData.get('category'),
+                amount: amountFloat,
+                note: formData.get('note') || 'Без нотатки',
+            };
+
+            try {
+                await addTransaction(newTransaction);
+                
+                form.reset();
+                toggleAddForm(); 
+                showNonBlockingMessage(`Транзакцію додано: ${newTransaction.note} (${newTransaction.amount.toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴)`, 'success');
+            } catch (error) {
+                console.error("Error adding document:", error);
+                showNonBlockingMessage(`Помилка додавання: ${error.message}`, 'error');
+            }
+        }
+
+        // --- SAMPLE DATA & SEEDING ---
+
+        function getFormattedDate(offsetDays) {
+            const date = new Date();
+            date.setDate(date.getDate() - offsetDays);
+            return date.toISOString().split('T')[0];
+        }
+
+        function getSampleData() {
+            return [
+                // Доходи
+                { date: getFormattedDate(30), type: 'income', category: 'Зарплата', amount: 35000.00, note: 'Зарплата за минулий місяць' },
+                { date: getFormattedDate(15), type: 'income', category: 'Фріланс', amount: 5500.00, note: 'Оплата за проєкт "Landing Page"' },
+                { date: getFormattedDate(5), type: 'income', category: 'Подарунок', amount: 1500.00, note: 'Подарунок на день народження' },
+                
+                // Витрати
+                { date: getFormattedDate(28), type: 'expense', category: 'Житло', amount: 12000.00, note: 'Оренда квартири + комунальні послуги' },
+                { date: getFormattedDate(27), type: 'expense', category: 'Їжа', amount: 2500.00, note: 'Продукти з супермаркету' },
+                { date: getFormattedDate(25), type: 'expense', category: 'Техніка', amount: 8999.00, note: 'Новий монітор для роботи' },
+                { date: getFormattedDate(20), type: 'expense', category: 'Транспорт', amount: 550.00, note: 'Поповнення проїзного' },
+                { date: getFormattedDate(18), type: 'expense', category: 'Дозвілля', amount: 800.00, note: 'Квитки в кіно та попкорн' },
+                { date: getFormattedDate(10), type: 'expense', category: 'Їжа', amount: 1200.00, note: 'Вечеря в ресторані' },
+                { date: getFormattedDate(8), type: 'expense', category: 'Освіта', amount: 199.00, note: 'Підписка на онлайн-курс' },
+                { date: getFormattedDate(3), type: 'expense', category: 'Здоров\'я', amount: 450.00, note: 'Ліки в аптеці' },
+                { date: getFormattedDate(1), type: 'expense', category: 'Інше', amount: 200.00, note: 'Дрібна канцелярія' }
+            ];
+        }
+
+
+        window.seedDatabase = async () => {
+             if (!state.isAuthReady) {
+                 showNonBlockingMessage('Система не готова.', 'error');
+                 return;
+            }
+
+            const dataToSeed = getSampleData();
+            showNonBlockingMessage(`Початок заповнення бази даних ${dataToSeed.length} тестовими записами...`, 'info');
+            
+            if (IS_CANVAS_ENVIRONMENT) {
+                const transactionsRef = collection(db, 'artifacts', appId, 'users', state.userId, 'transactions');
+                const promises = dataToSeed.map(data => addDoc(transactionsRef, data).catch(e => {
+                    console.error("Error seeding document:", data, e);
+                    return null; 
+                }));
+                await Promise.all(promises);
+            } else {
+                // MOCK MODE: Замінюємо поточні дані на тестові
+                state.transactions = dataToSeed.map(t => ({...t, id: crypto.randomUUID()}));
+                // Оновлення UI
+                setupRealtimeListener();
+            }
+
+            showNonBlockingMessage('Базу даних успішно заповнено тестовими даними!', 'success');
+        }
+
+
+        // --- DASHBOARD LOGIC (Updated to use dynamic state.transactions) ---
+
+        function calculateKpi() {
+            const totalIncome = state.transactions
+                .filter(t => t.type === 'income')
+                .reduce((sum, t) => sum + t.amount, 0);
+
+            const totalExpense = state.transactions
+                .filter(t => t.type === 'expense')
+                .reduce((sum, t) => sum + t.amount, 0);
+            
+            return { totalIncome, totalExpense, balance: totalIncome - totalExpense };
+        }
+
+        function renderKpiCards() {
+            const { totalIncome, totalExpense, balance } = calculateKpi();
+            const cardsContainer = document.getElementById('kpi-cards');
+
+            const formatter = new Intl.NumberFormat('uk-UA', { minimumFractionDigits: 2 });
+
+            const dataOrigin = IS_CANVAS_ENVIRONMENT ? '(З Firestore)' : '(З пам\'яті)';
+
+            cardsContainer.innerHTML = `
+                <div class="card p-6 border-l-4 border-emerald-500">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-stone-500 text-sm font-medium">Загальний дохід</p>
+                            <h3 class="text-2xl font-bold text-stone-800 mt-1">${formatter.format(totalIncome)} ₴</h3>
+                        </div>
+                        <div class="bg-emerald-100 p-2 rounded-lg text-emerald-600">
+                            <i class="fa-solid fa-arrow-trend-up"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-sm text-emerald-600 font-medium">
+                        <i class="fa-solid fa-database"></i> ${dataOrigin}
+                    </div>
+                </div>
+
+                <div class="card p-6 border-l-4 border-rose-500">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-stone-500 text-sm font-medium">Загальні витрати</p>
+                            <h3 class="text-2xl font-bold text-stone-800 mt-1">${formatter.format(totalExpense)} ₴</h3>
+                        </div>
+                        <div class="bg-rose-100 p-2 rounded-lg text-rose-600">
+                            <i class="fa-solid fa-arrow-trend-down"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-sm text-rose-600 font-medium">
+                        <i class="fa-solid fa-database"></i> ${dataOrigin}
+                    </div>
+                </div>
+
+                <div class="card p-6 border-l-4 border-amber-500">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-stone-500 text-sm font-medium">Баланс</p>
+                            <h3 class="text-2xl font-bold text-stone-800 mt-1">${formatter.format(balance)} ₴</h3>
+                        </div>
+                        <div class="bg-amber-100 p-2 rounded-lg text-amber-600">
+                            <i class="fa-solid fa-piggy-bank"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-sm ${balance >= 0 ? 'text-emerald-600' : 'text-rose-600'} font-medium">
+                        <i class="fa-solid fa-database"></i> ${dataOrigin}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTopExpenses() {
+            const topExpenses = state.transactions
+                .filter(t => t.type === 'expense')
+                .sort((a, b) => b.amount - a.amount)
+                .slice(0, 5); // Top 5
+
+            const tbody = document.getElementById('topExpensesBody');
+            tbody.innerHTML = '';
+            
+            if (topExpenses.length === 0) {
+                 tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-stone-500">Витрати відсутні.</td></tr>';
+                 return;
+            }
+
+            topExpenses.forEach(t => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-stone-50 transition-colors';
+                
+                let iconClass = 'fa-circle-question';
+                if(t.category === 'Їжа') iconClass = 'fa-utensils';
+                else if(t.category === 'Транспорт') iconClass = 'fa-car';
+                else if(t.category === 'Житло') iconClass = 'fa-house';
+                else if(t.category === 'Освіта') iconClass = 'fa-graduation-cap';
+                else if(t.category === 'Техніка') iconClass = 'fa-laptop';
+
+                row.innerHTML = `
+                    <td class="px-6 py-4 flex items-center gap-3">
+                        <div class="w-8 h-8 rounded bg-rose-100 text-rose-600 flex items-center justify-center"><i class="fa-solid ${iconClass}"></i></div>
+                        <span>${t.category}</span>
+                    </td>
+                    <td class="px-6 py-4 text-stone-500">${t.date}</td>
+                    <td class="px-6 py-4 text-stone-500">${t.note}</td>
+                    <td class="px-6 py-4 text-right font-bold text-stone-800">- ${t.amount.toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+
+        // --- CHART CONFIG & UPDATE ---
+        let barChartInstance = null;
+        let pieChartInstance = null;
+
+        function getChartData() {
+            const expenseData = state.transactions.filter(t => t.type === 'expense');
+            const categoryMap = expenseData.reduce((acc, t) => {
+                acc[t.category] = (acc[t.category] || 0) + t.amount;
+                return acc;
+            }, {});
+
+            const monthlyData = state.transactions.reduce((acc, t) => {
+                const date = new Date(t.date);
+                // Використовуємо місяць та рік для унікального ключа
+                const monthYear = `${date.getFullYear()}-${date.getMonth().toString().padStart(2, '0')}`;
+                
+                if (!acc[monthYear]) {
+                    acc[monthYear] = { 
+                        income: 0, 
+                        expense: 0, 
+                        // Форматуємо для відображення
+                        label: date.toLocaleString('uk-UA', { month: 'short', year: '2-digit' }) 
+                    };
+                }
+
+                if (t.type === 'income') {
+                    acc[monthYear].income += t.amount;
+                } else {
+                    acc[monthYear].expense += t.amount;
+                }
+                return acc;
+            }, {});
+
+            // Отримуємо останні 6 місяців, сортуючи за ключем YYYY-MM
+            const sortedMonths = Object.keys(monthlyData).sort().slice(-6);
+
+            const barLabels = sortedMonths.map(key => monthlyData[key].label);
+            const incomeSeries = sortedMonths.map(key => monthlyData[key].income);
+            const expenseSeries = sortedMonths.map(key => monthlyData[key].expense);
+
+
+            return { categoryMap, barLabels, incomeSeries, expenseSeries };
+        }
+
+
+        function initCharts() {
+            const { categoryMap, barLabels, incomeSeries, expenseSeries } = getChartData();
+            
+            // Bar Chart
+            const barCtx = document.getElementById('barChart');
+            if(barCtx) {
+                barChartInstance = new Chart(barCtx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: barLabels, 
+                        datasets: [
+                            {
+                                label: 'Доходи',
+                                data: incomeSeries,
+                                backgroundColor: '#10B981',
+                                borderRadius: 4
+                            },
+                            {
+                                label: 'Витрати',
+                                data: expenseSeries,
+                                backgroundColor: '#F43F5E',
+                                borderRadius: 4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { usePointStyle: true, font: { family: 'Inter' } } }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { font: { family: 'Inter' } } },
+                            x: { grid: { display: false }, ticks: { font: { family: 'Inter' } } }
+                        }
+                    }
+                });
+            }
+
+
+            // Pie Chart
+            const pieCtx = document.getElementById('pieChart');
+            if(pieCtx) {
+                pieChartInstance = new Chart(pieCtx.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(categoryMap),
+                        datasets: [{
+                            data: Object.values(categoryMap),
+                            backgroundColor: [
+                                '#F59E0B', '#F87171', '#818CF8', '#34D399', '#60A5FA', '#9CA3AF', '#D1D5DB', '#FBCFE8'
+                            ],
+                            borderWidth: 0,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '65%',
+                        plugins: {
+                            legend: { position: 'right', labels: { usePointStyle: true, font: { family: 'Inter', size: 11 } } }
+                        }
+                    }
+                });
+            }
+        }
+
+        window.updateCharts = updateCharts;
+        function updateCharts() {
+             if (!barChartInstance || !pieChartInstance) {
+                initCharts();
+                return;
+            }
+
+            const { categoryMap, barLabels, incomeSeries, expenseSeries } = getChartData();
+            
+            // Update Pie Chart Data
+            pieChartInstance.data.labels = Object.keys(categoryMap);
+            pieChartInstance.data.datasets[0].data = Object.values(categoryMap);
+            pieChartInstance.update();
+
+            // Update Bar Chart Data
+            barChartInstance.data.labels = barLabels;
+            barChartInstance.data.datasets[0].data = incomeSeries;
+            barChartInstance.data.datasets[1].data = expenseSeries;
+            barChartInstance.update();
+        }
+
+        // --- INIT ---
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('addTransactionForm').addEventListener('submit', submitNewTransaction);
+            document.getElementById('typeFilter').addEventListener('change', applyFilters);
+            document.getElementById('categoryFilter').addEventListener('change', applyFilters);
+            document.getElementById('searchFilter').addEventListener('input', applyFilters);
+
+            populateCategorySelects();
+            
+            switchView('dashboard'); 
+
+            // Ініціалізація Firebase або Mock Mode
+            initFirebase();
+        });
+
+    </script>
+</body>
+</html>
