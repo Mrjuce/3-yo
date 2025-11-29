@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinManager Pro - Повний Функціонал</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        stone: { 850: '#1c1917', 950: '#0c0a09' } // Darker shades
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s, color 0.3s; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #44403c; }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 350px;
+        }
+        
+        /* Modal Transitions */
+        .modal-enter { opacity: 0; transform: scale(0.95); }
+        .modal-enter-active { opacity: 1; transform: scale(1); transition: opacity 200ms, transform 200ms; }
+        .modal-exit { opacity: 1; transform: scale(1); }
+        .modal-exit-active { opacity: 0; transform: scale(0.95); transition: opacity 200ms, transform 200ms; }
+
+        .nav-item.active {
+            background-color: #f5f5f4; color: #d97706;
+        }
+        .dark .nav-item.active {
+            background-color: #292524; color: #f59e0b;
+        }
+        
+        .card { transition: background-color 0.3s, box-shadow 0.3s; }
+    </style>
+</head>
+<body class="bg-stone-50 text-stone-800 dark:bg-stone-900 dark:text-stone-100 min-h-screen flex flex-col md:flex-row">
+
+    <div id="authModal" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white dark:bg-stone-800 rounded-2xl shadow-2xl w-full max-w-md p-8 border dark:border-stone-700">
+            <h2 class="text-2xl font-bold mb-6 border-b dark:border-stone-700 pb-3" id="auth-title">Авторизація</h2>
+            <form id="authForm" class="space-y-4">
+                <div id="registerFields" class="hidden space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Логін (ID)</label>
+                        <input type="text" id="authLogin" class="w-full p-3 rounded-lg border dark:bg-stone-700 dark:border-stone-600 focus:ring-2 ring-amber-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Ім'я</label>
+                        <input type="text" id="authName" class="w-full p-3 rounded-lg border dark:bg-stone-700 dark:border-stone-600 focus:ring-2 ring-amber-500 outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Email</label>
+                    <input type="email" id="authEmail" required class="w-full p-3 rounded-lg border dark:bg-stone-700 dark:border-stone-600 focus:ring-2 ring-amber-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Пароль</label>
+                    <input type="password" id="authPassword" required class="w-full p-3 rounded-lg border dark:bg-stone-700 dark:border-stone-600 focus:ring-2 ring-amber-500 outline-none">
+                </div>
+                <div id="auth-message" class="text-sm text-red-500 hidden"></div>
+                <div class="flex justify-between items-center pt-2">
+                    <button type="button" id="toggleAuthBtn" class="text-sm text-stone-500 hover:text-amber-600 dark:text-stone-400">Створити акаунт</button>
+                    <button type="submit" id="authSubmitBtn" class="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition">Увійти</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="addTransactionModal" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4" onclick="if(event.target.id === 'addTransactionModal') closeModal('addTransactionModal')">
+        <div class="bg-white dark:bg-stone-800 rounded-2xl shadow-2xl w-full max-w-lg p-6 border dark:border-stone-700">
+            <h2 class="text-xl font-bold mb-4">Нова Операція</h2>
+            <form id="addTransactionForm" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Тип</label>
+                        <select id="transactionType" class="w-full p-2 rounded-lg border dark:bg-stone-700 dark:border-stone-600 outline-none">
+                            <option value="expense">Витрата (-)</option>
+                            <option value="income">Дохід (+)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Сума</label>
+                        <input type="number" id="transactionAmount" required step="0.01" class="w-full p-2 rounded-lg border dark:bg-stone-700 dark:border-stone-600 outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Категорія</label>
+                    <select id="transactionCategory" required class="w-full p-2 rounded-lg border dark:bg-stone-700 dark:border-stone-600 outline-none"></select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Дата</label>
+                    <input type="date" id="transactionDate" required class="w-full p-2 rounded-lg border dark:bg-stone-700 dark:border-stone-600 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Теги (через кому)</label>
+                    <input type="text" id="transactionTags" placeholder="напр. їжа, кафе, друзі" class="w-full p-2 rounded-lg border dark:bg-stone-700 dark:border-stone-600 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Повтор</label>
+                    <select id="repeatFrequency" class="w-full p-2 rounded-lg border dark:bg-stone-700 dark:border-stone-600 outline-none">
+                        <option value="none">Ні</option>
+                        <option value="Monthly">Щомісячно</option>
+                        <option value="Yearly">Щорічно</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Опис</label>
+                    <input type="text" id="transactionDescription" class="w-full p-2 rounded-lg border dark:bg-stone-700 dark:border-stone-600 outline-none">
+                </div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeModal('addTransactionModal')" class="px-4 py-2 rounded-lg bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-300">Скасувати</button>
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-amber-600 text-white hover:bg-amber-700">Зберегти</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="categoryModal" class="fixed inset-0 bg-stone-900/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4" onclick="if(event.target.id === 'categoryModal') closeModal('categoryModal')">
+        <div class="bg-white dark:bg-stone-800 rounded-2xl shadow-2xl w-full max-w-lg p-6 border dark:border-stone-700">
+            <h2 class="text-xl font-bold mb-4">Керування Категоріями</h2>
+            
+            <div class="mb-6">
+                <h3 class="text-sm font-bold text-stone-500 mb-2 uppercase">Додати нову</h3>
+                <form id="addCategoryForm" class="flex gap-2">
+                    <select id="newCatType" class="p-2 rounded-lg border dark:bg-stone-700 dark:border-stone-600">
+                        <option value="expense">Витрата</option>
+                        <option value="income">Дохід</option>
+                    </select>
+                    <input type="text" id="newCatName" placeholder="Назва категорії" required class="flex-grow p-2 rounded-lg border dark:bg-stone-700 dark:border-stone-600">
+                    <button type="submit" class="px-3 py-2 bg-emerald-600 text-white rounded-lg"><i class="fa-solid fa-plus"></i></button>
+                </form>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <h3 class="font-semibold text-emerald-600 mb-2">Доходи</h3>
+                    <ul id="catListIncome" class="space-y-1 text-sm max-h-60 overflow-y-auto custom-scroll"></ul>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-red-600 mb-2">Витрати</h3>
+                    <ul id="catListExpense" class="space-y-1 text-sm max-h-60 overflow-y-auto custom-scroll"></ul>
+                </div>
+            </div>
+            
+            <div class="mt-6 text-right">
+                <button onclick="closeModal('categoryModal')" class="px-4 py-2 bg-stone-200 dark:bg-stone-700 rounded-lg">Закрити</button>
+            </div>
+        </div>
+    </div>
+
+    <aside class="w-full md:w-64 bg-white dark:bg-stone-850 border-r dark:border-stone-700 flex flex-col fixed bottom-0 md:top-0 md:h-full z-20 md:z-10 shadow-lg md:shadow-none">
+        <div class="p-6 hidden md:block">
+            <h1 class="text-2xl font-bold bg-gradient-to-r from-amber-500 to-orange-600 bg-clip-text text-transparent">FinManager</h1>
+        </div>
+        
+        <nav class="flex md:flex-col justify-around md:justify-start flex-grow p-2 md:p-4 gap-1">
+            <a href="#" onclick="switchView('dashboard')" class="nav-item flex flex-col md:flex-row items-center p-3 rounded-xl transition-colors" data-view="dashboard">
+                <i class="fa-solid fa-chart-pie md:w-6 text-center"></i><span class="text-xs md:text-base md:ml-3">Дашборд</span>
+            </a>
+            <a href="#" onclick="switchView('transactions')" class="nav-item flex flex-col md:flex-row items-center p-3 rounded-xl transition-colors" data-view="transactions">
+                <i class="fa-solid fa-list-ul md:w-6 text-center"></i><span class="text-xs md:text-base md:ml-3">Операції</span>
+            </a>
+            <a href="#" onclick="switchView('budgeting')" class="nav-item flex flex-col md:flex-row items-center p-3 rounded-xl transition-colors" data-view="budgeting">
+                <i class="fa-solid fa-scale-balanced md:w-6 text-center"></i><span class="text-xs md:text-base md:ml-3">Бюджети</span>
+            </a>
+            <a href="#" onclick="switchView('ai-assistant')" class="nav-item flex flex-col md:flex-row items-center p-3 rounded-xl transition-colors" data-view="ai-assistant">
+                <i class="fa-solid fa-robot md:w-6 text-center"></i><span class="text-xs md:text-base md:ml-3">AI</span>
+            </a>
+            <a href="#" onclick="switchView('profile')" class="nav-item flex flex-col md:flex-row items-center p-3 rounded-xl transition-colors" data-view="profile">
+                <i class="fa-solid fa-user-gear md:w-6 text-center"></i><span class="text-xs md:text-base md:ml-3">Профіль</span>
+            </a>
+        </nav>
+
+        <div class="hidden md:flex flex-col p-4 gap-3 border-t dark:border-stone-700">
+             <button onclick="toggleTheme()" class="flex items-center p-3 rounded-xl hover:bg-stone-100 dark:hover:bg-stone-800 transition">
+                <i id="themeIcon" class="fa-solid fa-moon w-6 text-center"></i>
+                <span class="ml-3">Тема</span>
+            </button>
+            
+            <button onclick="openModal('addTransactionModal')" class="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl shadow-lg shadow-amber-500/30 transition transform hover:scale-[1.02]">
+                <i class="fa-solid fa-plus-circle mr-2"></i> Додати
+            </button>
+
+            <div id="authContainer" class="relative">
+                <button onclick="openModal('authModal')" id="authLoginBtn" class="w-full py-2 bg-stone-200 dark:bg-stone-700 rounded-lg text-sm">Увійти</button>
+                
+                <div id="userProfileSection" class="hidden relative">
+                    <button onclick="document.getElementById('userDropdown').classList.toggle('hidden')" class="flex items-center w-full p-2 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800">
+                        <div class="w-8 h-8 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center font-bold" id="avatarInitials">U</div>
+                        <div class="ml-3 text-left overflow-hidden">
+                            <p class="text-sm font-bold truncate w-24" id="avatarName">User</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-up ml-auto text-xs"></i>
+                    </button>
+                    <div id="userDropdown" class="hidden absolute bottom-full left-0 w-64 mb-2 bg-white dark:bg-stone-800 rounded-xl shadow-xl border dark:border-stone-700 overflow-hidden">
+                        <div class="p-4 border-b dark:border-stone-700 bg-stone-50 dark:bg-stone-900">
+                            <p class="font-bold" id="dropdownName">User</p>
+                            <p class="text-xs text-stone-500 truncate" id="dropdownEmail">email</p>
+                        </div>
+                        <button onclick="logout()" class="w-full text-left p-3 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
+                            <i class="fa-solid fa-sign-out-alt mr-2"></i> Вийти
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="flex-grow p-6 md:p-10 md:ml-64 mb-20 md:mb-0 relative overflow-y-auto h-screen custom-scroll">
+        
+        <div id="unauth-overlay" class="absolute inset-0 bg-white/80 dark:bg-stone-900/80 backdrop-blur-sm z-40 flex items-center justify-center hidden">
+            <div class="text-center p-8 bg-white dark:bg-stone-800 rounded-2xl shadow-xl border dark:border-stone-700">
+                <i class="fa-solid fa-lock text-4xl text-amber-500 mb-4"></i>
+                <h3 class="text-xl font-bold mb-2">Доступ обмежено</h3>
+                <p class="text-stone-500 mb-6">Будь ласка, увійдіть у свій акаунт</p>
+                <button onclick="openModal('authModal')" class="px-6 py-2 bg-amber-600 text-white rounded-lg">Увійти</button>
+            </div>
+        </div>
+
+        <header class="flex justify-between items-center mb-8">
+            <h2 class="text-3xl font-bold" id="view-title">Дашборд</h2>
+            <button onclick="toggleTheme()" class="md:hidden p-2 rounded-full bg-stone-200 dark:bg-stone-700"><i class="fa-solid fa-adjust"></i></button>
+        </header>
+
+        <div id="dashboard-view" class="view space-y-6">
+            <div id="kpi-cards" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 card bg-white dark:bg-stone-800 p-6 rounded-2xl shadow-sm border dark:border-stone-700">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold">Динаміка</h3>
+                        <div class="flex bg-stone-100 dark:bg-stone-700 rounded-lg p-1">
+                            <button onclick="updateChartPeriod('month')" class="px-3 py-1 text-xs rounded-md bg-white dark:bg-stone-600 shadow-sm" id="btn-chart-month">Місяць</button>
+                            <button onclick="updateChartPeriod('year')" class="px-3 py-1 text-xs rounded-md text-stone-500" id="btn-chart-year">Рік</button>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="mainChart"></canvas>
+                    </div>
+                </div>
+                <div class="card bg-white dark:bg-stone-800 p-6 rounded-2xl shadow-sm border dark:border-stone-700">
+                    <h3 class="font-bold mb-4">Структура Витрат</h3>
+                    <div class="chart-container" style="height: 250px;">
+                        <canvas id="doughnutChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="transactions-view" class="view hidden space-y-6">
+            <div class="card bg-white dark:bg-stone-800 p-6 rounded-2xl shadow-sm border dark:border-stone-700">
+                <div class="flex flex-col md:flex-row gap-4 justify-between mb-6">
+                    <div class="flex gap-2">
+                        <button onclick="generateTestData()" class="px-4 py-2 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 rounded-lg text-sm hover:bg-indigo-200">
+                            <i class="fa-solid fa-dice mr-2"></i>Демо дані
+                        </button>
+                        <button onclick="exportToCSV()" class="px-4 py-2 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 rounded-lg text-sm hover:bg-emerald-200">
+                            <i class="fa-solid fa-file-csv mr-2"></i>Експорт
+                        </button>
+                    </div>
+                    <input type="text" id="searchFilter" placeholder="Пошук (опис, теги)..." oninput="applyFilters()" class="p-2 border rounded-lg dark:bg-stone-700 dark:border-stone-600 outline-none w-full md:w-64">
+                </div>
+                
+                <div class="flex gap-4 overflow-x-auto pb-2 mb-4">
+                    <select id="filterType" onchange="applyFilters()" class="p-2 rounded-lg border dark:bg-stone-700 dark:border-stone-600"><option value="all">Всі типи</option><option value="income">Доходи</option><option value="expense">Витрати</option></select>
+                    <select id="filterCategory" onchange="applyFilters()" class="p-2 rounded-lg border dark:bg-stone-700 dark:border-stone-600"><option value="all">Всі категорії</option></select>
+                    <input type="text" id="filterTag" placeholder="Фільтр по тегу" oninput="applyFilters()" class="p-2 rounded-lg border dark:bg-stone-700 dark:border-stone-600 w-32">
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="text-stone-500 border-b dark:border-stone-700">
+                            <tr>
+                                <th class="p-3">Дата</th>
+                                <th class="p-3">Категорія/Теги</th>
+                                <th class="p-3">Опис</th>
+                                <th class="p-3 text-right">Сума</th>
+                                <th class="p-3 text-right">Дії</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionsTableBody" class="divide-y dark:divide-stone-700 text-sm"></tbody>
+                    </table>
+                </div>
+                <div class="flex justify-between items-center mt-4">
+                     <button onclick="changePage(-1)" id="prevPageBtn" class="px-3 py-1 bg-stone-100 dark:bg-stone-700 rounded">Назад</button>
+                     <span id="pageInfo" class="text-sm">1 / 1</span>
+                     <button onclick="changePage(1)" id="nextPageBtn" class="px-3 py-1 bg-stone-100 dark:bg-stone-700 rounded">Вперед</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="budgeting-view" class="view hidden space-y-6">
+            <div class="card bg-white dark:bg-stone-800 p-6 rounded-2xl shadow-sm border dark:border-stone-700">
+                <h3 class="font-bold mb-4">Налаштування Бюджетів (на місяць)</h3>
+                <form id="budgetForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" onsubmit="saveBudgets(event)">
+                    <div id="budgetFields" class="contents"></div>
+                    <div class="col-span-full pt-4 text-right">
+                        <button type="submit" class="px-6 py-2 bg-emerald-600 text-white rounded-lg">Зберегти Бюджети</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card bg-white dark:bg-stone-800 p-6 rounded-2xl shadow-sm border dark:border-stone-700">
+                <h3 class="font-bold mb-4">Виконання Бюджету</h3>
+                <div id="budgetBars" class="space-y-4"></div>
+            </div>
+        </div>
+
+        <div id="ai-assistant-view" class="view hidden">
+            <div class="card bg-white dark:bg-stone-800 p-6 rounded-2xl shadow-sm border dark:border-stone-700 h-[calc(100vh-200px)] flex flex-col">
+                <div class="flex-grow overflow-y-auto space-y-4 p-4 mb-4 bg-stone-50 dark:bg-stone-900 rounded-xl custom-scroll" id="chatWindow">
+                    <div class="p-3 bg-white dark:bg-stone-800 rounded-lg shadow-sm max-w-[85%] self-start border dark:border-stone-700">
+                        <p class="font-bold text-amber-600 text-xs mb-1">AI FinManager</p>
+                        <p class="text-sm">Привіт! Я твій локальний аналітик. Запитай мене: "Скільки я витратив на їжу?", "Який баланс?", "Покажіть найбільші витрати".</p>
+                    </div>
+                </div>
+                <form id="aiForm" class="flex gap-2">
+                    <input type="text" id="aiInput" placeholder="Запитайте щось..." class="flex-grow p-3 rounded-xl border dark:bg-stone-700 dark:border-stone-600 outline-none">
+                    <button type="submit" class="p-3 bg-amber-600 text-white rounded-xl hover:bg-amber-700"><i class="fa-solid fa-paper-plane"></i></button>
+                </form>
+            </div>
+        </div>
+
+        <div id="profile-view" class="view hidden space-y-6">
+            <div class="card bg-white dark:bg-stone-800 p-6 rounded-2xl shadow-sm border dark:border-stone-700">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-16 h-16 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center text-2xl font-bold" id="profileInitials">U</div>
+                    <div>
+                        <h2 class="text-xl font-bold" id="profileName">User</h2>
+                        <p class="text-stone-500 text-sm" id="profileEmail">email</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="p-4 bg-stone-50 dark:bg-stone-900 rounded-xl">
+                        <span class="text-xs text-stone-500">Логін</span>
+                        <p class="font-mono" id="profileLogin">...</p>
+                    </div>
+                    <div class="p-4 bg-stone-50 dark:bg-stone-900 rounded-xl">
+                        <span class="text-xs text-stone-500">Дата реєстрації</span>
+                        <p id="profileDate">...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card bg-white dark:bg-stone-800 p-6 rounded-2xl shadow-sm border dark:border-stone-700">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold">Налаштування</h3>
+                </div>
+                <div class="space-y-3">
+                    <button onclick="openModal('categoryModal')" class="w-full flex justify-between items-center p-4 bg-stone-50 dark:bg-stone-900 rounded-xl hover:bg-stone-100 dark:hover:bg-stone-800">
+                        <span class="font-medium"><i class="fa-solid fa-tags mr-3 text-stone-400"></i> Керування Категоріями</span>
+                        <i class="fa-solid fa-chevron-right text-stone-400"></i>
+                    </button>
+                    </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // --- CONSTANTS & CONFIG ---
+        const KEYS = { USER: 'fm_user', DATA: 'fm_data_', SETTINGS: 'fm_settings' };
+        
+        const DEFAULT_CATEGORIES = {
+            income: ['Зарплата', 'Фріланс', 'Подарунки', 'Інвестиції'],
+            expense: ['Їжа', 'Оренда', 'Транспорт', 'Розваги', 'Комунальні', 'Одяг', 'Здоров\'я', 'Техніка']
+        };
+
+        // --- STATE ---
+        let state = {
+            user: null,
+            transactions: [],
+            budgets: {},
+            categories: JSON.parse(JSON.stringify(DEFAULT_CATEGORIES)), // Deep copy
+            settings: { theme: 'light' },
+            view: { current: 'dashboard', page: 1, limit: 10, filters: {}, chartMode: 'month' }
+        };
+
+        // Charts
+        let mainChart = null;
+        let doughnutChart = null;
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSettings();
+            if (loadUser()) {
+                initApp();
+            } else {
+                updateAuthUI(false);
+            }
+            setupEventListeners();
+        });
+
+        function loadSettings() {
+            const stored = localStorage.getItem(KEYS.SETTINGS);
+            if (stored) state.settings = JSON.parse(stored);
+            applyTheme(state.settings.theme);
+        }
+
+        function loadUser() {
+            const userJson = localStorage.getItem(KEYS.USER);
+            if (!userJson) return false;
+            state.user = JSON.parse(userJson);
+            
+            // Load Data
+            const dataJson = localStorage.getItem(KEYS.DATA + state.user.uid);
+            if (dataJson) {
+                const data = JSON.parse(dataJson);
+                state.transactions = data.transactions || [];
+                state.budgets = data.budgets || {};
+                state.categories = data.categories || JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
+            }
+            return true;
+        }
+
+        function initApp() {
+            updateAuthUI(true);
+            updateProfileUI();
+            processRecurring();
+            renderCategorySelects();
+            renderCategoryManager(); // Init manager list
+            switchView('dashboard'); // Loads dashboard
+        }
+
+        // --- THEME & UI ---
+        function toggleTheme() {
+            state.settings.theme = state.settings.theme === 'light' ? 'dark' : 'light';
+            localStorage.setItem(KEYS.SETTINGS, JSON.stringify(state.settings));
+            applyTheme(state.settings.theme);
+        }
+
+        function applyTheme(theme) {
+            const body = document.body;
+            const icon = document.getElementById('themeIcon');
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+                icon.classList.replace('fa-moon', 'fa-sun');
+            } else {
+                document.documentElement.classList.remove('dark');
+                icon.classList.replace('fa-sun', 'fa-moon');
+            }
+            // Re-render charts if they exist to update colors
+            if (state.user && document.getElementById('dashboard-view').classList.contains('hidden') === false) {
+                 renderCharts();
+            }
+        }
+
+        function switchView(viewName) {
+            document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+            document.getElementById(`${viewName}-view`).classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.querySelector(`.nav-item[data-view="${viewName}"]`).classList.add('active');
+            
+            const titles = { dashboard: 'Дашборд', transactions: 'Операції', budgeting: 'Бюджетування', 'ai-assistant': 'AI Аналітик', profile: 'Мій Профіль' };
+            document.getElementById('view-title').textContent = titles[viewName];
+
+            if (viewName === 'dashboard') renderCharts();
+            if (viewName === 'transactions') applyFilters();
+            if (viewName === 'budgeting') renderBudgeting();
+        }
+
+        function openModal(id) {
+            const m = document.getElementById(id);
+            m.classList.remove('hidden');
+            m.classList.add('flex');
+            // Set date to today for transaction modal
+            if(id === 'addTransactionModal') document.getElementById('transactionDate').valueAsDate = new Date();
+        }
+
+        function closeModal(id) {
+            const m = document.getElementById(id);
+            m.classList.add('hidden');
+            m.classList.remove('flex');
+        }
+
+        // --- AUTHENTICATION ---
+        const authForm = document.getElementById('authForm');
+        let isRegister = false;
+
+        document.getElementById('toggleAuthBtn').onclick = () => {
+            isRegister = !isRegister;
+            document.getElementById('registerFields').classList.toggle('hidden');
+            document.getElementById('auth-title').textContent = isRegister ? 'Реєстрація' : 'Авторизація';
+            document.getElementById('authSubmitBtn').textContent = isRegister ? 'Зареєструватись' : 'Увійти';
+            document.getElementById('toggleAuthBtn').textContent = isRegister ? 'Вже є акаунт? Увійти' : 'Створити акаунт';
+        };
+
+        authForm.onsubmit = (e) => {
+            e.preventDefault();
+            const email = document.getElementById('authEmail').value.trim().toLowerCase();
+            const password = document.getElementById('authPassword').value;
+            const msg = document.getElementById('auth-message');
+            
+            const db = JSON.parse(localStorage.getItem('fm_users_db') || '{}');
+            const hashedPwd = btoa(password); // Simple mock hash
+
+            if (isRegister) {
+                const login = document.getElementById('authLogin').value.trim().toLowerCase();
+                const name = document.getElementById('authName').value.trim();
+                
+                if (!login || !name) { showMsg(msg, 'Заповніть всі поля'); return; }
+                if (db[login]) { showMsg(msg, 'Логін зайнятий'); return; }
+                if (Object.values(db).some(u => u.email === email)) { showMsg(msg, 'Email вже існує'); return; }
+
+                const uid = 'user_' + login + '_' + Date.now();
+                const newUser = { login, name, email, password: hashedPwd, uid, regDate: new Date().toISOString() };
+                
+                db[login] = newUser;
+                localStorage.setItem('fm_users_db', JSON.stringify(db));
+                loginSuccess(newUser);
+
+            } else {
+                const user = Object.values(db).find(u => u.email === email && u.password === hashedPwd);
+                if (user) loginSuccess(user);
+                else showMsg(msg, 'Невірні дані');
+            }
+        };
+
+        function showMsg(el, text) {
+            el.textContent = text;
+            el.classList.remove('hidden');
+        }
+
+        function loginSuccess(userObj) {
+            state.user = userObj;
+            localStorage.setItem(KEYS.USER, JSON.stringify(state.user));
+            document.getElementById('authForm').reset();
+            closeModal('authModal');
+            
+            // Load Data immediately
+            const dataJson = localStorage.getItem(KEYS.DATA + userObj.uid);
+            if (dataJson) {
+                const data = JSON.parse(dataJson);
+                state.transactions = data.transactions || [];
+                state.budgets = data.budgets || {};
+                state.categories = data.categories || JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
+            } else {
+                state.transactions = [];
+                state.budgets = {};
+                state.categories = JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
+            }
+            initApp();
+        }
+
+        function logout() {
+            if(!confirm('Вийти?')) return;
+            localStorage.removeItem(KEYS.USER);
+            state.user = null;
+            state.transactions = [];
+            updateAuthUI(false);
+            switchView('dashboard');
+        }
+
+        function updateAuthUI(isLoggedIn) {
+            const overlay = document.getElementById('unauth-overlay');
+            const authContainer = document.getElementById('authContainer');
+            const loginBtn = document.getElementById('authLoginBtn');
+            const profileSec = document.getElementById('userProfileSection');
+
+            if (isLoggedIn) {
+                overlay.classList.add('hidden');
+                loginBtn.classList.add('hidden');
+                profileSec.classList.remove('hidden');
+            } else {
+                overlay.classList.remove('hidden');
+                loginBtn.classList.remove('hidden');
+                profileSec.classList.add('hidden');
+            }
+        }
+
+        function updateProfileUI() {
+            if (!state.user) return;
+            const name = state.user.name;
+            document.getElementById('avatarName').textContent = name;
+            document.getElementById('avatarInitials').textContent = name[0].toUpperCase();
+            document.getElementById('dropdownName').textContent = name;
+            document.getElementById('dropdownEmail').textContent = state.user.email;
+            
+            document.getElementById('profileName').textContent = name;
+            document.getElementById('profileInitials').textContent = name[0].toUpperCase();
+            document.getElementById('profileEmail').textContent = state.user.email;
+            document.getElementById('profileLogin').textContent = state.user.login;
+            document.getElementById('profileDate').textContent = new Date(state.user.regDate).toLocaleDateString();
+        }
+
+        // --- DATA MANAGEMENT ---
+        function saveData() {
+            if (!state.user) return;
+            const data = {
+                transactions: state.transactions,
+                budgets: state.budgets,
+                categories: state.categories
+            };
+            localStorage.setItem(KEYS.DATA + state.user.uid, JSON.stringify(data));
+        }
+
+        // --- TRANSACTIONS ---
+        document.getElementById('addTransactionForm').onsubmit = (e) => {
+            e.preventDefault();
+            const amount = parseFloat(document.getElementById('transactionAmount').value);
+            const type = document.getElementById('transactionType').value;
+            const tags = document.getElementById('transactionTags').value.split(',').map(t => t.trim()).filter(t => t);
+            
+            const tx = {
+                id: Date.now().toString(36),
+                type,
+                amount,
+                category: document.getElementById('transactionCategory').value,
+                date: document.getElementById('transactionDate').value,
+                tags: tags,
+                desc: document.getElementById('transactionDescription').value,
+                repeat: document.getElementById('repeatFrequency').value
+            };
+            
+            if (tx.repeat !== 'none') tx.lastRun = tx.date; // For simple recurring logic
+
+            state.transactions.push(tx);
+            saveData();
+            closeModal('addTransactionModal');
+            document.getElementById('addTransactionForm').reset();
+            
+            if (state.settings.view === 'transactions') applyFilters();
+            else renderCharts(); // Refresh dashboard
+        };
+
+        // --- CATEGORY MANAGEMENT ---
+        function renderCategorySelects() {
+            const modalSel = document.getElementById('transactionCategory');
+            const filterSel = document.getElementById('filterCategory');
+            
+            const updateOpts = () => {
+                const type = document.getElementById('transactionType').value;
+                const cats = state.categories[type] || [];
+                modalSel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+            };
+            
+            // Populate filter (all cats)
+            const allCats = [...new Set([...state.categories.income, ...state.categories.expense])].sort();
+            filterSel.innerHTML = '<option value="all">Всі категорії</option>' + allCats.map(c => `<option value="${c}">${c}</option>`).join('');
+
+            updateOpts();
+            document.getElementById('transactionType').onchange = updateOpts;
+        }
+
+        function renderCategoryManager() {
+            const listInc = document.getElementById('catListIncome');
+            const listExp = document.getElementById('catListExpense');
+            
+            const createItem = (c, type) => `
+                <li class="flex justify-between items-center p-2 bg-stone-100 dark:bg-stone-900 rounded">
+                    <span>${c}</span>
+                    <button onclick="deleteCategory('${type}', '${c}')" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-times"></i></button>
+                </li>`;
+
+            listInc.innerHTML = state.categories.income.map(c => createItem(c, 'income')).join('');
+            listExp.innerHTML = state.categories.expense.map(c => createItem(c, 'expense')).join('');
+        }
+
+        document.getElementById('addCategoryForm').onsubmit = (e) => {
+            e.preventDefault();
+            const type = document.getElementById('newCatType').value;
+            const name = document.getElementById('newCatName').value.trim();
+            if (name && !state.categories[type].includes(name)) {
+                state.categories[type].push(name);
+                saveData();
+                renderCategoryManager();
+                renderCategorySelects();
+                document.getElementById('newCatName').value = '';
+            }
+        };
+
+        window.deleteCategory = (type, name) => {
+            if(!confirm(`Видалити категорію "${name}"?`)) return;
+            state.categories[type] = state.categories[type].filter(c => c !== name);
+            saveData();
+            renderCategoryManager();
+            renderCategorySelects();
+        };
+
+        // --- LOGIC: CHARTS & DASHBOARD ---
+        window.updateChartPeriod = (mode) => {
+            state.view.chartMode = mode;
+            // Toggle active style
+            document.getElementById('btn-chart-month').className = mode === 'month' ? 'px-3 py-1 text-xs rounded-md bg-white dark:bg-stone-600 shadow-sm transition' : 'px-3 py-1 text-xs rounded-md text-stone-500 transition';
+            document.getElementById('btn-chart-year').className = mode === 'year' ? 'px-3 py-1 text-xs rounded-md bg-white dark:bg-stone-600 shadow-sm transition' : 'px-3 py-1 text-xs rounded-md text-stone-500 transition';
+            renderCharts();
+        };
+
+        function renderCharts() {
+            const ctxMain = document.getElementById('mainChart').getContext('2d');
+            const ctxDon = document.getElementById('doughnutChart').getContext('2d');
+            
+            // Filter Data based on Mode
+            const now = new Date();
+            let labels = [];
+            let incomeData = [];
+            let expenseData = [];
+            let expenseByCat = {};
+
+            if (state.view.chartMode === 'month') {
+                // Daily data for current month
+                const year = now.getFullYear();
+                const month = now.getMonth();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                labels = Array.from({length: daysInMonth}, (_, i) => i + 1);
+                incomeData = new Array(daysInMonth).fill(0);
+                expenseData = new Array(daysInMonth).fill(0);
+
+                state.transactions.forEach(t => {
+                    const d = new Date(t.date);
+                    if (d.getFullYear() === year && d.getMonth() === month) {
+                        const dayIdx = d.getDate() - 1;
+                        if (t.type === 'income') incomeData[dayIdx] += t.amount;
+                        else {
+                            expenseData[dayIdx] += t.amount;
+                            expenseByCat[t.category] = (expenseByCat[t.category] || 0) + t.amount;
+                        }
+                    }
+                });
+            } else {
+                // Monthly data for current year
+                labels = ['Січ', 'Лют', 'Бер', 'Кві', 'Тра', 'Чер', 'Лип', 'Сер', 'Вер', 'Жов', 'Лис', 'Гру'];
+                incomeData = new Array(12).fill(0);
+                expenseData = new Array(12).fill(0);
+                
+                state.transactions.forEach(t => {
+                    const d = new Date(t.date);
+                    if (d.getFullYear() === now.getFullYear()) {
+                        const mIdx = d.getMonth();
+                        if (t.type === 'income') incomeData[mIdx] += t.amount;
+                        else {
+                            expenseData[mIdx] += t.amount;
+                            expenseByCat[t.category] = (expenseByCat[t.category] || 0) + t.amount;
+                        }
+                    }
+                });
+            }
+
+            // Update Main Chart
+            const isDark = state.settings.theme === 'dark';
+            const gridColor = isDark ? '#44403c' : '#e5e7eb';
+            const textColor = isDark ? '#a8a29e' : '#6b7280';
+
+            if (mainChart) mainChart.destroy();
+            mainChart = new Chart(ctxMain, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Доходи', data: incomeData, backgroundColor: '#10b981', borderRadius: 4 },
+                        { label: 'Витрати', data: expenseData, backgroundColor: '#ef4444', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false, color: gridColor }, ticks: { color: textColor } },
+                        y: { grid: { color: gridColor }, ticks: { color: textColor } }
+                    },
+                    plugins: { legend: { labels: { color: textColor } } }
+                }
+            });
+
+            // Update Doughnut
+            const donutLabels = Object.keys(expenseByCat);
+            const donutData = Object.values(expenseByCat);
+            if (doughnutChart) doughnutChart.destroy();
+            doughnutChart = new Chart(ctxDon, {
+                type: 'doughnut',
+                data: {
+                    labels: donutLabels,
+                    datasets: [{
+                        data: donutData,
+                        backgroundColor: ['#f59e0b', '#3b82f6', '#ec4899', '#8b5cf6', '#6366f1', '#14b8a6'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right', labels: { color: textColor } } }
+                }
+            });
+
+            // Update KPIs
+            const totalInc = incomeData.reduce((a,b)=>a+b, 0);
+            const totalExp = expenseData.reduce((a,b)=>a+b, 0);
+            const balance = totalInc - totalExp;
+            
+            const kpiHTML = (title, val, color, icon) => `
+                <div class="card bg-white dark:bg-stone-800 p-5 rounded-2xl shadow-sm border dark:border-stone-700 flex items-center gap-4">
+                    <div class="p-3 rounded-full ${color.bg} ${color.text}"><i class="fa-solid ${icon} text-xl"></i></div>
+                    <div><p class="text-xs text-stone-500">${title}</p><p class="text-2xl font-bold ${color.textVal}">₴ ${val.toLocaleString()}</p></div>
+                </div>`;
+            
+            document.getElementById('kpi-cards').innerHTML = 
+                kpiHTML('Баланс періоду', balance, {bg: balance>=0?'bg-emerald-100 dark:bg-emerald-900/30':'bg-red-100 dark:bg-red-900/30', text: balance>=0?'text-emerald-600':'text-red-600', textVal: balance>=0?'text-emerald-600':'text-red-600'}, 'fa-wallet') +
+                kpiHTML('Доходи', totalInc, {bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-600', textVal: 'text-stone-800 dark:text-stone-100'}, 'fa-arrow-trend-up') +
+                kpiHTML('Витрати', totalExp, {bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-600', textVal: 'text-stone-800 dark:text-stone-100'}, 'fa-arrow-trend-down');
+        }
+
+        // --- TRANSACTIONS LIST ---
+        function applyFilters() {
+            const fType = document.getElementById('filterType').value;
+            const fCat = document.getElementById('filterCategory').value;
+            // !!! ОСНОВНИЙ ПОШУК (ОПИС ТА ТЕГИ) !!!
+            const fSearch = document.getElementById('searchFilter').value.toLowerCase(); 
+            const fTag = document.getElementById('filterTag').value.toLowerCase();
+
+            let res = state.transactions.filter(t => {
+                if (fType !== 'all' && t.type !== fType) return false;
+                if (fCat !== 'all' && t.category !== fCat) return false;
+                
+                // Перевірка головного пошуку
+                const descMatch = (t.desc || '').toLowerCase().includes(fSearch);
+                const tagsMatch = (t.tags || []).some(tag => tag.toLowerCase().includes(fSearch));
+                if (fSearch && !descMatch && !tagsMatch) return false;
+                
+                if (fTag && !(t.tags||[]).some(tag => tag.includes(fTag))) return false;
+                return true;
+            });
+
+            // Sort by date desc
+            res.sort((a,b) => new Date(b.date) - new Date(a.date));
+            
+            // Pagination
+            const pages = Math.ceil(res.length / state.view.limit) || 1;
+            state.view.page = Math.min(state.view.page, pages);
+            
+            const start = (state.view.page - 1) * state.view.limit;
+            const sliced = res.slice(start, start + state.view.limit);
+            
+            renderTable(sliced);
+            document.getElementById('pageInfo').textContent = `${state.view.page} / ${pages}`;
+            document.getElementById('prevPageBtn').disabled = state.view.page === 1;
+            document.getElementById('nextPageBtn').disabled = state.view.page === pages;
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('transactionsTableBody');
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-stone-500">Нічого не знайдено</td></tr>';
+                return;
+            }
+            tbody.innerHTML = data.map(t => {
+                const isExp = t.type === 'expense';
+                const tagsHtml = (t.tags||[]).map(tag => `<span class="px-2 py-0.5 bg-stone-100 dark:bg-stone-700 text-xs rounded-full mr-1">#${tag}</span>`).join('');
+                return `
+                <tr class="hover:bg-stone-50 dark:hover:bg-stone-800/50 transition border-b dark:border-stone-800 last:border-0">
+                    <td class="p-3 whitespace-nowrap">${t.date}</td>
+                    <td class="p-3">
+                        <div class="font-medium">${t.category}</div>
+                        <div class="mt-1">${tagsHtml}</div>
+                    </td>
+                    <td class="p-3 text-stone-600 dark:text-stone-400 max-w-xs truncate">${t.desc || '-'}</td>
+                    <td class="p-3 text-right font-bold ${isExp ? 'text-red-600' : 'text-emerald-600'}">
+                        ${isExp ? '-' : '+'} ₴${t.amount.toLocaleString()}
+                    </td>
+                    <td class="p-3 text-right">
+                        <button onclick="deleteTx('${t.id}')" class="text-stone-400 hover:text-red-500"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        window.changePage = (dir) => {
+            state.view.page += dir;
+            applyFilters();
+        };
+
+        window.deleteTx = (id) => {
+            if(!confirm('Видалити?')) return;
+            state.transactions = state.transactions.filter(t => t.id !== id);
+            saveData();
+            applyFilters();
+        };
+
+        window.exportToCSV = () => {
+            if (state.transactions.length === 0) return alert('Даних немає');
+            let csv = 'Date,Type,Category,Amount,Description,Tags\n';
+            state.transactions.forEach(t => {
+                const tags = (t.tags||[]).join(';');
+                csv += `${t.date},${t.type},${t.category},${t.amount},"${t.desc}",${tags}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `fin_export_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+        };
+
+        // --- BUDGETING ---
+        function renderBudgeting() {
+            // Fields
+            const cont = document.getElementById('budgetFields');
+            const bars = document.getElementById('budgetBars');
+            
+            cont.innerHTML = state.categories.expense.map(c => `
+                <div>
+                    <label class="text-xs font-bold text-stone-500">${c}</label>
+                    <input type="number" name="bud_${c}" value="${state.budgets[c]||''}" placeholder="Ліміт..." class="w-full p-2 border rounded dark:bg-stone-700 dark:border-stone-600">
+                </div>
+            `).join('');
+
+            // Bars (Current Month Analysis)
+            const now = new Date();
+            const currMonthStr = now.toISOString().slice(0, 7);
+            const spentByCat = {};
+            state.transactions.forEach(t => {
+                if(t.type === 'expense' && t.date.startsWith(currMonthStr)) {
+                    spentByCat[t.category] = (spentByCat[t.category] || 0) + t.amount;
+                }
+            });
+
+            bars.innerHTML = Object.keys(state.budgets).map(cat => {
+                const limit = state.budgets[cat];
+                if (!limit) return '';
+                const spent = spentByCat[cat] || 0;
+                const pct = Math.min(100, (spent / limit) * 100);
+                const color = pct > 100 ? 'bg-red-500' : (pct > 75 ? 'bg-amber-500' : 'bg-emerald-500');
+                return `
+                    <div class="mb-3">
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-medium">${cat}</span>
+                            <span>${spent}/${limit} грн</span>
+                        </div>
+                        <div class="h-2 bg-stone-200 dark:bg-stone-700 rounded-full overflow-hidden">
+                            <div class="h-full ${color}" style="width: ${pct}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            if(!bars.innerHTML) bars.innerHTML = '<p class="text-stone-400 italic">Бюджети не встановлені</p>';
+        }
+
+        window.saveBudgets = (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            state.budgets = {};
+            for (let [key, val] of formData.entries()) {
+                if (val && parseFloat(val) > 0) state.budgets[key.replace('bud_', '')] = parseFloat(val);
+            }
+            saveData();
+            renderBudgeting();
+            alert('Збережено');
+        };
+
+        // --- AI ASSISTANT (LOCAL LOGIC) ---
+        document.getElementById('aiForm').onsubmit = (e) => {
+            e.preventDefault();
+            const input = document.getElementById('aiInput');
+            const query = input.value.trim().toLowerCase();
+            if (!query) return;
+
+            addChatMsg(input.value, 'user');
+            input.value = '';
+
+            // Simulate thinking
+            setTimeout(() => {
+                const response = generateAIResponse(query);
+                addChatMsg(response, 'ai');
+            }, 600);
+        };
+
+        function addChatMsg(text, sender) {
+            const win = document.getElementById('chatWindow');
+            const div = document.createElement('div');
+            const isAI = sender === 'ai';
+            div.className = `p-3 rounded-lg shadow-sm max-w-[85%] text-sm ${isAI ? 'bg-white dark:bg-stone-800 self-start border dark:border-stone-700' : 'bg-amber-100 dark:bg-amber-900/40 text-stone-800 dark:text-stone-100 self-end ml-auto'}`;
+            div.innerHTML = isAI ? `<p class="font-bold text-amber-600 text-xs mb-1">AI FinManager</p><p>${text}</p>` : `<p>${text}</p>`;
+            win.appendChild(div);
+            win.scrollTop = win.scrollHeight;
+        }
+
+        function generateAIResponse(q) {
+            // Basic Keyword Matching Logic
+            const txs = state.transactions;
+            const now = new Date();
+            const currMonth = now.toISOString().slice(0, 7);
+            
+            // 1. Total Balance / General
+            if (q.includes('баланс') || q.includes('скільки грошей')) {
+                const inc = txs.reduce((s, t) => s + (t.type==='income'?t.amount:0), 0);
+                const exp = txs.reduce((s, t) => s + (t.type==='expense'?t.amount:0), 0);
+                return `Ваш поточний загальний баланс становить <b>${(inc-exp).toLocaleString()} грн</b>.`;
+            }
+
+            // 2. Spending by Category (Current Month)
+            if (q.includes('витратив') && (q.includes('їжу') || q.includes('їжа'))) return calcCatSum('Їжа');
+            if (q.includes('витратив') && q.includes('транспорт')) return calcCatSum('Транспорт');
+            
+            // Generic Category Search
+            for (let cat of state.categories.expense) {
+                if (q.includes(cat.toLowerCase())) return calcCatSum(cat);
+            }
+
+            // 3. Biggest Expense
+            if (q.includes('найбільш')) {
+                const exp = txs.filter(t => t.type === 'expense').sort((a,b) => b.amount - a.amount)[0];
+                if (exp) return `Найбільша витрата: <b>${exp.amount} грн</b> на "${exp.category}" (${exp.date}).`;
+                return "У вас ще немає витрат.";
+            }
+
+            return "Я розумію запитання про баланс, витрати по категоріях (напр. 'Скільки витратив на їжу?') та найбільші покупки. Спробуйте перефразувати.";
+        }
+
+        function calcCatSum(catName) {
+            const now = new Date();
+            const currMonth = now.toISOString().slice(0, 7);
+            const sum = state.transactions
+                .filter(t => t.type === 'expense' && t.category === catName && t.date.startsWith(currMonth))
+                .reduce((a,b) => a + b.amount, 0);
+            return `У цьому місяці ви витратили на <b>${catName}</b>: ${sum.toLocaleString()} грн.`;
+        }
+
+        // --- DEMO DATA & RECURRING ---
+        window.generateTestData = () => {
+            if(!confirm('Згенерувати 50 транзакцій?')) return;
+            const cats = { income: state.categories.income, expense: state.categories.expense };
+            const tagsList = ['кава', 'супермаркет', 'кіно', 'сім\'я', 'авто', 'подорож'];
+            
+            for(let i=0; i<50; i++) {
+                const isExp = Math.random() > 0.3;
+                const type = isExp ? 'expense' : 'income';
+                const cList = cats[type];
+                const date = new Date();
+                date.setDate(date.getDate() - Math.floor(Math.random() * 60)); // last 2 months
+                
+                state.transactions.push({
+                    id: Date.now() + Math.random(),
+                    type,
+                    amount: Math.floor(Math.random() * (isExp?2000:15000)) + 50,
+                    category: cList[Math.floor(Math.random() * cList.length)],
+                    date: date.toISOString().split('T')[0],
+                    desc: 'Тестова операція #' + i,
+                    tags: [tagsList[Math.floor(Math.random() * tagsList.length)]],
+                    repeat: 'none'
+                });
+            }
+            saveData();
+            applyFilters();
+            alert('Готово!');
+        };
+
+        function processRecurring() {
+            // Simplified Logic: Check lastRun vs Today. Usually runs on app load.
+            // For this demo, we assume the user just manages manual entries mostly, 
+            // but the structure supports expansion here.
+        }
+
+        function setupEventListeners() {
+            // Close modals on Esc
+            document.onkeydown = (e) => { if(e.key === 'Escape') document.querySelectorAll('.fixed').forEach(m => m.classList.add('hidden')); };
+        }
+
+    </script>
+</body>
+</html>
